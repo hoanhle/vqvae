@@ -8,8 +8,9 @@ class ResidualStack(nn.Module):
     def __init__(self, num_hiddens, num_residual_layers, num_residual_hiddens):
         super().__init__()
         # See Section 4.1 of "Neural Discrete Representation Learning".
+        # TODO: Read ResNet paper again https://arxiv.org/abs/1512.03385
         layers = []
-        for i in range(num_residual_layers):
+        for _ in range(num_residual_layers):
             layers.append(
                 nn.Sequential(
                     nn.ReLU(),
@@ -92,23 +93,75 @@ class Encoder(nn.Module):
     def forward(self, x):
         h = self.conv(x)
         return self.residual_stack(h)
+
+
+class Decoder(nn.Module):
+    def __init__(
+        self,
+        embedding_dim,
+        num_hiddens,
+        num_upsampling_layers,
+        num_residual_layers,
+        num_residual_hiddens,
+    ):
+        super().__init__()
+        self.conv = nn.Conv2d(
+            in_channels=embedding_dim,
+            out_channels=num_hiddens,
+            kernel_size=3,
+            padding=1,
+        )
+        self.residual_stack = ResidualStack(
+            num_hiddens, num_residual_layers, num_residual_hiddens
+        )
+        upconv = nn.Sequential()
+        for upsampling_layer in range(num_upsampling_layers):
+            if upsampling_layer < num_upsampling_layers - 2:
+                (in_channels, out_channels) = (num_hiddens, num_hiddens)
+
+            elif upsampling_layer == num_upsampling_layers - 2:
+                (in_channels, out_channels) = (num_hiddens, num_hiddens // 2)
+
+            else:
+                (in_channels, out_channels) = (num_hiddens // 2, 3)
+
+            upconv.add_module(
+                f"up{upsampling_layer}",
+                nn.ConvTranspose2d(
+                    in_channels=in_channels,
+                    out_channels=out_channels,
+                    kernel_size=4,
+                    stride=2,
+                    padding=1,
+                ),
+            )
+            if upsampling_layer < num_upsampling_layers - 1:
+                upconv.add_module(f"relu{upsampling_layer}", nn.ReLU())
+
+        self.upconv = upconv
+
+    def forward(self, x):
+        h = self.conv(x)
+        h = self.residual_stack(h)
+        x_recon = self.upconv(h)
+        return x_recon
     
-
-
-
 if __name__ == "__main__":
-    # Create dummy input
-    dummy_input = torch.randn(1, 3, 256, 256)  # Batch size 1, 3 channels, 256x256 image
+    from utils import export_to_netron
+    import torch
     
-    # Create encoder model
-    encoder = Encoder(
-        in_channels=3,
+    # Create a sample decoder model
+    decoder = Decoder(
+        embedding_dim=64,
         num_hiddens=128,
-        num_downsampling_layers=2,
+        num_upsampling_layers=3,
         num_residual_layers=2,
         num_residual_hiddens=32
     )
     
-    # Export to ONNX
-    export_to_netron(encoder, dummy_input, "encoder.onnx")
+    # Create dummy input matching decoder's expected input shape
+    dummy_input = torch.randn(1, 64, 8, 8)  # Example shape
+    
+    # Export and visualize
+    export_to_netron(decoder, dummy_input, "decoder.onnx")
 
