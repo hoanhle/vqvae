@@ -145,23 +145,30 @@ class Decoder(nn.Module):
         h = self.residual_stack(h)
         x_recon = self.upconv(h)
         return x_recon
-    
-if __name__ == "__main__":
-    from utils import export_to_netron
-    import torch
-    
-    # Create a sample decoder model
-    decoder = Decoder(
-        embedding_dim=64,
-        num_hiddens=128,
-        num_upsampling_layers=3,
-        num_residual_layers=2,
-        num_residual_hiddens=32
-    )
-    
-    # Create dummy input matching decoder's expected input shape
-    dummy_input = torch.randn(1, 64, 8, 8)  # Example shape
-    
-    # Export and visualize
-    export_to_netron(decoder, dummy_input, "decoder.onnx")
 
+
+class SonnetExponentialMovingAverage(nn.Module):
+    # See: https://github.com/deepmind/sonnet/blob/5cbfdc356962d9b6198d5b63f0826a80acfdf35b/sonnet/src/moving_averages.py#L25.
+    # They do *not* use the exponential moving average updates described in Appendix A.1
+    # of "Neural Discrete Representation Learning".
+    # This module keeps track of a hidden exponential moving average that is
+    # initialized as a vector of zeros which is then normalized to give the average.
+    # This gives us a moving average which isn't biased towards either zero or the
+    # initial value. Reference (https://arxiv.org/pdf/1412.6980.pdf)
+
+    def __init__(self, decay, shape):
+        super().__init__()
+        self.decay = decay
+        self.counter = 0
+        self.register_buffer("hidden", torch.zeros(*shape))
+        self.register_buffer("average", torch.zeros(*shape))
+
+    def update(self, value):
+        self.counter += 1
+        with torch.no_grad():
+            self.hidden -= (self.hidden - value) * (1 - self.decay)
+            self.average = self.hidden / (1 - self.decay ** self.counter)
+
+    def __call__(self, value):
+        self.update(value)
+        return self.average
