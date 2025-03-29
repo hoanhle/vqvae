@@ -9,3 +9,4 @@ torchvision==0.20.1; sys_platform=="darwin" or platform_machine == "aarch64"
 netron
 matplotlib
 tqdm
+tensorboard
