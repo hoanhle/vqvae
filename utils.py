@@ -2,6 +2,7 @@ import torch
 import subprocess
 import numpy as np
 from PIL import Image
+from matplotlib import pyplot as plt
 
 
 def export_to_netron(model, dummy_input, filename="model.onnx"):
@@ -29,3 +30,9 @@ def save_img_tensors_as_grid(img_tensors, nrows, f):
         img_arr[row_start:row_end, col_start:col_end] = imgs_array[idx]
 
     Image.fromarray(img_arr.astype(np.uint8), "RGB").save(f"{f}")
+
+
+def get_device():
+    return torch.device("mps" if torch.backends.mps.is_available() 
+                      else "cuda" if torch.cuda.is_available() 
+                      else "cpu")
