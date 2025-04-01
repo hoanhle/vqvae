@@ -5,6 +5,7 @@ from torchvision.datasets import CIFAR10
 from vqvae import VQVAE
 from utils import save_img_tensors_as_grid
 from pathlib import Path
+from constants import CIFAR10_DATA_ROOT
 
 def main():
     # Load the model checkpoint
@@ -15,18 +16,12 @@ def main():
     device = torch.device("mps" if torch.backends.mps.is_available() else "cuda" if torch.cuda.is_available() else "cpu")
     model = VQVAE(**checkpoint['model_args']).to(device)
     model.load_state_dict(checkpoint['model_state_dict'])
-    model.eval()
-    
+    model.eval()    
     # Initialize dataset
-    data_root = "./data/cifar10"
-    normalize = transforms.Normalize(mean=[0.5, 0.5, 0.5], std=[1.0, 1.0, 1.0])
-    transform = transforms.Compose([
-        transforms.ToTensor(),
-        normalize,
-    ])
+
     
     # Create test dataset and dataloader
-    test_dataset = CIFAR10(data_root, False, transform, download=False)
+    test_dataset = CIFAR10(CIFAR10_DATA_ROOT, False, transform, download=False)
     test_loader = DataLoader(
         dataset=test_dataset,
         batch_size=32,
@@ -39,10 +34,6 @@ def main():
         test_batch = next(iter(test_loader))[0].to(device)
         out = model(test_batch)
         reconstructions = out["x_recon"]
-        
-        # # Denormalize images
-        # reconstructions = reconstructions * 0.5 + 0.5
-        # test_batch = test_batch * 0.5 + 0.5
         
         # Save original and reconstructed images
         save_dir = checkpoint_path.parent
