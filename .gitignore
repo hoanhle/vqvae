@@ -1,3 +1,7 @@
 venv
 __pycache__
 *.onnx
+.idea/
+logs/
+checkpoints/
+data/
