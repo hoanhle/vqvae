@@ -10,7 +10,7 @@ from torch.utils.data import DataLoader
 from torchvision import transforms
 from torchvision.datasets import CIFAR10
 from vqvae import VQVAE
-from utils import save_img_tensors_as_grid
+from utils import save_img_tensors_as_grid, get_transform
 from datetime import datetime
 from pathlib import Path
 
@@ -37,13 +37,7 @@ def main():
     # Initialize dataset.
     batch_size = 32
     workers = 10
-    normalize = transforms.Normalize(mean=[0.5, 0.5, 0.5], std=[1.0, 1.0, 1.0])
-    transform = transforms.Compose(
-        [
-            transforms.ToTensor(),
-            normalize,
-        ]
-    )
+    transform = get_transform()
     data_root = "./data/cifar10"
     download = False
     train_dataset = CIFAR10(data_root, True, transform, download=download)

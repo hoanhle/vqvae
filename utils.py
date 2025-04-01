@@ -2,7 +2,7 @@ import torch
 import subprocess
 import numpy as np
 from PIL import Image
-from matplotlib import pyplot as plt
+from torchvision import transforms
 
 
 def export_to_netron(model, dummy_input, filename="model.onnx"):
@@ -36,3 +36,11 @@ def get_device():
     return torch.device("mps" if torch.backends.mps.is_available() 
                       else "cuda" if torch.cuda.is_available() 
                       else "cpu")
+
+def get_transform():
+    normalize = transforms.Normalize(mean=[0.5, 0.5, 0.5], std=[1.0, 1.0, 1.0])
+    transform = transforms.Compose([
+        transforms.ToTensor(),
+        normalize,
+    ])
+    return transform
