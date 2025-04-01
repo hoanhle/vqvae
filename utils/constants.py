@@ -1,0 +1,1 @@
+CIFAR10_DATA_ROOT = "./data/cifar10"

@@ -4,13 +4,11 @@ import numpy as np
 import torch
 from tqdm import tqdm
 
-from PIL import Image
 from torch import nn, optim
 from torch.utils.data import DataLoader
-from torchvision import transforms
 from torchvision.datasets import CIFAR10
 from vqvae import VQVAE
-from utils import save_img_tensors_as_grid, get_transform
+from utils.utils import get_transform
 from datetime import datetime
 from pathlib import Path
 

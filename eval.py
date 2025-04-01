@@ -1,12 +1,11 @@
 import torch
 from torch.utils.data import DataLoader
-from torchvision import transforms
 from torchvision.datasets import CIFAR10
 from vqvae import VQVAE
-from utils import save_img_tensors_as_grid
+from utils.utils import save_img_tensors_as_grid
 from pathlib import Path
-from constants import CIFAR10_DATA_ROOT
-from utils import get_transform
+from utils.utils import CIFAR10_DATA_ROOT
+from utils.utils import get_transform
 
 def main():
     # Load the model checkpoint

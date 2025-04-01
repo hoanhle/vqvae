@@ -1,9 +1,9 @@
 import torch
 from torch.utils.tensorboard import SummaryWriter
 from vqvae import VQVAE
-from utils import get_transform, get_device
+from utils.utils import get_transform, get_device
 from torchvision.datasets import CIFAR10
-from constants import CIFAR10_DATA_ROOT
+from utils.utils import CIFAR10_DATA_ROOT
 from pathlib import Path
 from eval_utils import get_receptive_field_coords
 import logging
@@ -32,9 +32,9 @@ def pad_to_size(t, target_size):
 
 def main():
     # Initialize TensorBoard writer.
-    writer = SummaryWriter("logs/vqvae_embeddings")
+    writer = SummaryWriter("../logs/vqvae_embeddings")
 
-    checkpoint_path = Path("checkpoints/vqvae_cifar10/run_2025-03-30_00-49-32/model.pth")
+    checkpoint_path = Path("../checkpoints/vqvae_cifar10/run_2025-03-30_00-49-32/model.pth")
     checkpoint = torch.load(checkpoint_path)
     
     # Initialize model with saved args
