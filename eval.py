@@ -6,6 +6,7 @@ from vqvae import VQVAE
 from utils import save_img_tensors_as_grid
 from pathlib import Path
 from constants import CIFAR10_DATA_ROOT
+from utils import get_transform
 
 def main():
     # Load the model checkpoint
@@ -17,10 +18,8 @@ def main():
     model = VQVAE(**checkpoint['model_args']).to(device)
     model.load_state_dict(checkpoint['model_state_dict'])
     model.eval()    
-    # Initialize dataset
 
-    
-    # Create test dataset and dataloader
+    transform = get_transform()
     test_dataset = CIFAR10(CIFAR10_DATA_ROOT, False, transform, download=False)
     test_loader = DataLoader(
         dataset=test_dataset,
