@@ -331,4 +331,5 @@ if __name__ == "__main__":
     # Visualize the model graph
     dummy_input = torch.randn(1, 3, 64, 64)  # Assuming 3 channel 64x64 images
     export_to_netron(model, dummy_input, "vqvae_model.onnx")
-
+    from torchsummary import summary
+    summary(model, (3, 64, 64))

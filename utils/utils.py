@@ -11,13 +11,17 @@ def export_to_netron(model, dummy_input, filename="model.onnx"):
     subprocess.run(["netron", filename])
 
 
-def save_img_tensors_as_grid(img_tensors, nrows, f):
+def preprocess_img_tensors(img_tensors):
     img_tensors = img_tensors.permute(0, 2, 3, 1)
     imgs_array = img_tensors.detach().cpu().numpy()
     imgs_array[imgs_array < -0.5] = -0.5
     imgs_array[imgs_array > 0.5] = 0.5
     imgs_array = 255 * (imgs_array + 0.5)
     (batch_size, img_size) = img_tensors.shape[:2]
+    return imgs_array, batch_size, img_size
+
+def save_img_tensors_as_grid(img_tensors, nrows, f):
+    imgs_array, batch_size, img_size = preprocess_img_tensors(img_tensors)
     ncols = batch_size // nrows
     img_arr = np.zeros((nrows * batch_size, ncols * batch_size, 3))
     for idx in range(batch_size):
