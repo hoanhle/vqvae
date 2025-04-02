@@ -1,6 +1,7 @@
 from pathlib import Path
 import numpy as np
-import pyviewer # pip install -e .
+
+
 from imgui_bundle import imgui, implot
 from pyviewer import single_image_viewer as siv
 from pyviewer.toolbar_viewer import ToolbarViewer
@@ -28,9 +29,8 @@ except:
 
 
 def main():
-
      # Load the model checkpoint
-    checkpoint_path = Path("checkpoints/vqvae_cifar10/run_2025-03-30_00-49-32/model.pth")
+    checkpoint_path = Path("checkpoints/vqvae_cifar10/run_2025-04-02_13-44-28/model.pth")
     checkpoint = torch.load(checkpoint_path, weights_only=True)
     
     device = get_device()
@@ -60,33 +60,47 @@ def main():
             self.state.seed = 0
             self.state.img = None
             self.state.index = np.random.randint(len(test_dataset))
-            self.state.update_requested = True  # Trigger image load on startup
-            self.test_dataset = test_dataset  # Cache the dataset
-            logging.info(f"Initial random index: {self.state.index}")
+            self.state.update_requested = True
+            self.state.encoding_indices = None
+            self.state.heatmap_data = None  # << store float version here
+            self.test_dataset = test_dataset
+
 
         def compute(self):
             if not self.state.update_requested:
-                return self.state.img  # Return cached combined image
+                return self.state.img
 
             with torch.no_grad():
+                logging.info(f"Computing image {self.state.index}")
                 t0 = time.time()
-                image, _ = self.test_dataset[self.state.index]
-                test_batch = image.unsqueeze(0).to(device)  # Add batch dimension
 
-                # Original image
+                # Load a single image
+                image, _ = self.test_dataset[self.state.index]
+                test_batch = image.unsqueeze(0).to(device)
+
+                # Preprocess original image
                 orig_array, _, _ = preprocess_img_tensors(test_batch)
 
-                # Reconstructed image
-                output = model(test_batch)
-                x_recon = output["x_recon"].cpu()
+                # Encode + Decode
+                z_q, _, _, encoding_indices = model.quantize(test_batch)
+                x_recon = model.decoder(z_q).cpu()
                 recon_array, _, _ = preprocess_img_tensors(x_recon)
 
-                # Concatenate side-by-side (H, W * 2, C)
+                # Combine original + reconstruction
                 combined = np.concatenate([orig_array[0], recon_array[0]], axis=1)
                 self.state.img = combined
 
-                self.state.update_requested = False  # Reset flag
-                logging.info(f"Data loading + reconstruction took {time.time() - t0:.2f}s")
+                # Store raw encoding indices (no normalization)
+                self.state.encoding_indices = (
+                    encoding_indices.view(z_q.shape[2], z_q.shape[3])
+                    .cpu()
+                    .numpy()
+                    .astype(np.int32)
+                )
+                self.state.heatmap_data = self.state.encoding_indices.astype(np.float32)
+
+                self.state.update_requested = False
+                logging.info(f"Total compute time: {time.time() - t0:.2f}s")
 
             return self.state.img
 
@@ -95,6 +109,22 @@ def main():
             if imgui.button("Next image"):
                 self.state.index = np.random.randint(len(self.test_dataset))
                 self.state.update_requested = True
+            
+            if hasattr(self.state, "heatmap_data") and self.state.heatmap_data is not None:
+                height, width = self.state.heatmap_data.shape
+                plot_size = (width * 40, height * 40)
+                if implot.begin_plot("Encoding Indices", plot_size):
+                    implot.setup_axes("Width", "Height")
+                    implot.plot_heatmap(
+                        "",
+                        self.state.heatmap_data,
+                        float(self.state.heatmap_data.min()),
+                        float(self.state.heatmap_data.max()),
+                        "%.0f"
+                    )
+                    implot.end_plot()
+
+
 
 
 
