@@ -58,7 +58,7 @@ def main():
     criterion = nn.MSELoss()
 
     # Train model.
-    epochs = 1
+    epochs = 10
     eval_every = 1000
     best_train_loss = float("inf")
     model.train()
