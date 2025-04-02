@@ -1,4 +1,4 @@
-from torchvision.datasets import CIFAR10
+from torchvision.datasets import CIFAR10, ImageNet
 from torchvision import transforms
 from pathlib import Path
 import matplotlib.pyplot as plt
@@ -21,6 +21,45 @@ def get_cifar10_datasets(data_dir: str = "./data/cifar10") -> Tuple[CIFAR10, CIF
     
     print(f"CIFAR-10 downloaded to: {target_path}")
     return trainset, testset
+
+def get_imagenet_datasets(data_dir: str = "./data/imagenet") -> Tuple[ImageNet, ImageNet]:
+    """Download and load ImageNet dataset.
+    
+    Args:
+        data_dir: Directory to store the dataset
+        
+    Returns:
+        Tuple of (train_dataset, val_dataset)
+    """
+    target_path = Path(data_dir)
+    
+    # Standard ImageNet normalization
+    normalize = transforms.Normalize(
+        mean=[0.485, 0.456, 0.406],
+        std=[0.229, 0.224, 0.225]
+    )
+    
+    # Training transforms
+    train_transform = transforms.Compose([
+        transforms.RandomResizedCrop(224),
+        transforms.RandomHorizontalFlip(),
+        transforms.ToTensor(),
+        normalize,
+    ])
+    
+    # Validation transforms
+    val_transform = transforms.Compose([
+        transforms.Resize(256),
+        transforms.CenterCrop(224),
+        transforms.ToTensor(),
+        normalize,
+    ])
+    
+    trainset = ImageNet(root=target_path, split='train', transform=train_transform)
+    valset = ImageNet(root=target_path, split='val', transform=val_transform)
+    
+    print(f"ImageNet downloaded to: {target_path}")
+    return trainset, valset
 
 def visualize_samples(
     dataset: CIFAR10,
@@ -77,6 +116,14 @@ def main():
         num_samples=5,
         title="CIFAR-10 Test Samples"
     )
+    
+    # Uncomment to load ImageNet dataset (requires significant disk space)
+    # imagenet_train, imagenet_val = get_imagenet_datasets()
+    # visualize_samples(
+    #     imagenet_train,
+    #     num_samples=5,
+    #     title="ImageNet Training Samples"
+    # )
 
 if __name__ == "__main__":
     main()
