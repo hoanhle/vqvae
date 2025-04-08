@@ -2,7 +2,7 @@ import torch
 
 from torch import nn
 from torch.nn import functional as F
-from utils.utils import export_to_netron
+from utils.torch_utils import export_to_netron
 
 class ResidualStack(nn.Module):
     def __init__(self, num_hiddens, num_residual_layers, num_residual_hiddens):
