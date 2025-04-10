@@ -1,0 +1,68 @@
+Bootstrap: docker
+From: nvidia/pytorch:24.12-py3  # Ubuntu 24.04, Python 3.12, PyTorch 2.6.0a0+df5bbc0, CUDA 12.6.3, cuDNN 9.6.0.74, TensorRT 10.7.0.23
+Registry: nvcr.io
+
+%environment
+    export PYTHONDONTWRITEBYTECODE=1
+    export PYTHONUNBUFFERED=1
+    export PIP_ROOT_USER_ACTION=ignore  # pip as root warnings
+
+%post
+    export DEBIAN_FRONTEND=noninteractive
+
+    # For making glfw work (pyviewer dependency)
+    apt-get update
+    apt-get install -y libglfw3
+    apt-get install -y libglfw3-dev
+
+    # Video export
+    apt-get install -y ffmpeg
+
+    # Update pip
+    python -m pip install --upgrade pip==25.0.1
+
+    # Pyviewer dependencies (pyviewer itself copied over by aalto_submit)
+    pip install glfw==2.8.0
+    pip install light-process==0.0.7 
+    pip install pyopengl==3.1.7
+    pip install py==1.11.0
+    pip install imgui-bundle==1.6.2
+    
+    # Other dependencies (grid.py etc.)
+    pip install tensorboard==2.19.0
+    pip install numpy==1.26.4
+    pip install python-smi==0.0.2  # nvidia-smi
+    pip install scipy==1.14.1
+    pip install matplotlib==3.10.1
+    pip install netron
+    pip install tqdm==4.67.1
+
+# Install, native Ubuntu 20.04:
+# wget https://github.com/sylabs/singularity/releases/download/v3.10.5/singularity-ce_3.10.5-bionic_amd64.deb
+# sudo apt install ./singularity-ce_3.10.5-bionic_amd64.deb
+
+# Install, WSL2 Ubuntu 22.04:
+# curl -s -L https://nvidia.github.io/libnvidia-container/gpgkey | sudo apt-key add -
+# curl -s -L https://nvidia.github.io/libnvidia-container/ubuntu22.04/libnvidia-container.list | sudo tee /etc/apt/sources.list.d/libnvidia-container.list
+# sudo apt update
+# sudo apt install libnvidia-container-tools
+# wget https://github.com/sylabs/singularity/releases/download/v3.10.5/singularity-ce_3.10.5-jammy_amd64.deb
+# sudo apt install ./singularity-ce_3.10.5-jammy_amd64.deb
+# sudo nano /etc/singularity/singularity.conf
+#  => set `nvidia-container-cli path = /usr/bin/nvidia-container-cli` (commented out)
+
+# Build SIF
+# singularity build --bind $(pwd):/mnt --fakeroot ~/vqvae-1.0.def /home/leh19/workspace/vqvae/vqvae-1.0.def
+
+# Convert SIF to sandbox for testing
+# sudo singularity build --sandbox ~/vqvae-sandbox ~/vqvae-1.0.sif
+
+# Build sandbox directly
+# sudo singularity build --force --bind $(pwd):/mnt --sandbox ~/vqvae-sandbox /home/leh19/workspace/vqvae/vqvae-1.0.def
+
+# Open shell in sandbox (test training etc.)
+# sudo singularity shell --writable --nv --nvccli --bind /home/leh19/workspace:/root/src,/home/leh19/datasets:/root/datasets ~/vqvae-sandbox
+
+# Open shell in read-only container
+# singularity shell --nv --nvccli --bind /home/leh19/workspace:/root/src,/home/leh19/datasets:/root/datasets vqvae-1.0.sif
+# PYTHONPATH=/root/src/aalto-submit/:/root/src/pyviewer/ python /root/src/vqvae/run_training.py
