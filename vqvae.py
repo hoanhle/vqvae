@@ -317,19 +317,17 @@ if __name__ == "__main__":
     # Create a sample model
     model_args = {
         "in_channels": 3,
-        "num_hiddens": 128,
+        "num_hiddens": 256,
         "num_downsampling_layers": 2,
         "num_residual_layers": 2,
-        "num_residual_hiddens": 32,
+        "num_residual_hiddens": 256,
         "embedding_dim": 64,
         "num_embeddings": 512,
         "use_ema": True,
         "decay": 0.99,
         "epsilon": 1e-5,
     }
-    model = VQVAE(**model_args)
+    model = VQVAE(**model_args).to("cuda")
     # Visualize the model graph
-    dummy_input = torch.randn(1, 3, 64, 64)  # Assuming 3 channel 64x64 images
+    dummy_input = torch.randn(1, 3, 64, 64).to("cuda")  # Assuming 3 channel 64x64 images
     export_to_netron(model, dummy_input, "vqvae_model.onnx")
-    from torchsummary import summary
-    summary(model, (3, 64, 64))
