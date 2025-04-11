@@ -13,9 +13,10 @@ from utils.torch_utils import get_transform
 from datetime import datetime
 from pathlib import Path
 from torch.utils.tensorboard import SummaryWriter
-from utils.torch_utils import get_device
+from utils.torch_utils import get_device, fix_seed
 from pathlib import Path
 import itertools
+from torchvision.utils import make_grid
 
 
 def train(submit_config, model_kwargs, dataset_kwargs, training_kwargs, device):
@@ -32,7 +33,7 @@ def train(submit_config, model_kwargs, dataset_kwargs, training_kwargs, device):
     workers = 10
     transform = get_transform()
     download = False
-    train_dataset = CIFAR10(dataset_kwargs.get('data_root'), dataset_kwargs.get('download'), transform, download=download)
+    train_dataset = CIFAR10(dataset_kwargs.get('data_root'), True, transform, download=download)
     train_data_variance = np.var(train_dataset.data / 255)
     train_loader = DataLoader(
         dataset=train_dataset,
@@ -43,6 +44,17 @@ def train(submit_config, model_kwargs, dataset_kwargs, training_kwargs, device):
     )
     # Create an infinite iterator
     train_loader_iter = itertools.cycle(train_loader)
+
+    test_dataset = CIFAR10(dataset_kwargs.get('data_root'), False, transform, download=download)
+    eval_loader = DataLoader(
+        dataset=test_dataset,
+        batch_size=8,
+        shuffle=False,
+        num_workers=workers,
+        pin_memory=True,
+    )
+
+    fixed_eval_images = next(iter(eval_loader))[0].to(device)
 
     # Multiplier for commitment loss. See Equation (3) in "Neural Discrete Representation
     # Learning".
@@ -56,11 +68,11 @@ def train(submit_config, model_kwargs, dataset_kwargs, training_kwargs, device):
 
     # Training settings
     total_training_images = training_kwargs['total_training_images']
+    eval_every = training_kwargs['eval_every']
 
     best_train_loss = float("inf")
     best_recon_error = float("inf")
     model.train()
-    global_step = 0
     total_images_processed = 0
 
     # Use tqdm for progress based on total images
@@ -103,12 +115,26 @@ def train(submit_config, model_kwargs, dataset_kwargs, training_kwargs, device):
             if current_recon_error < best_recon_error:
                 best_recon_error = current_recon_error
 
+            # Check if it's time to log images
+            if total_images_processed > 0 and total_images_processed % eval_every == 0:
+                with torch.no_grad():
+                    # Use the fixed evaluation images for consistent comparison.
+                    out_eval = model(fixed_eval_images)
+                    imgs_viz = (fixed_eval_images.clamp(-0.5, 0.5) + 0.5)
+                    recon_viz = (out_eval["x_recon"].clamp(-0.5, 0.5) + 0.5)
+
+                    grid_orig = make_grid(imgs_viz, nrow=4)  # Adjust nrow as needed.
+                    grid_recon = make_grid(recon_viz, nrow=4)
+
+                    writer.add_image('eval/original_images', grid_orig, total_images_processed)
+                    writer.add_image('eval/reconstructed_images', grid_recon, total_images_processed)
+
+                    
             total_images_processed += current_batch_size
-            global_step += 1
 
             # Update progress bar
             pbar.update(current_batch_size)
-            pbar.set_postfix({"Step": global_step, "ReconErr": current_recon_error, "BestReconErr": best_recon_error, "BestLoss": best_train_loss})
+            pbar.set_postfix({"ReconErr": current_recon_error, "BestReconErr": best_recon_error, "BestLoss": best_train_loss})
 
     save_path = run_dir / "model.pth"
     torch.save({
@@ -135,6 +161,8 @@ def train(submit_config, model_kwargs, dataset_kwargs, training_kwargs, device):
 
 
 def main(args):
+    fix_seed(42)
+    
     # Setup device
     device = get_device()
 
@@ -168,7 +196,8 @@ def main(args):
     }
 
     training_kwargs = {
-        'total_training_images': 100000,
+        'total_training_images': 1_240_000,
+        'eval_every': 100_240,
     }
 
     # Train model.
