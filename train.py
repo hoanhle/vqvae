@@ -15,6 +15,7 @@ from pathlib import Path
 from torch.utils.tensorboard import SummaryWriter
 from utils.torch_utils import get_device
 from pathlib import Path
+import itertools
 
 
 def train(submit_config, model_kwargs, dataset_kwargs, training_kwargs, device):
@@ -38,7 +39,10 @@ def train(submit_config, model_kwargs, dataset_kwargs, training_kwargs, device):
         batch_size=batch_size,
         shuffle=True,
         num_workers=workers,
+        pin_memory=True,
     )
+    # Create an infinite iterator
+    train_loader_iter = itertools.cycle(train_loader)
 
     # Multiplier for commitment loss. See Equation (3) in "Neural Discrete Representation
     # Learning".
@@ -51,52 +55,60 @@ def train(submit_config, model_kwargs, dataset_kwargs, training_kwargs, device):
     criterion = nn.MSELoss()
 
     # Training settings
-    epochs = training_kwargs.get('epochs', 1)
-    eval_every = training_kwargs.get('eval_every', 10)
-   
+    total_training_images = training_kwargs['total_training_images']
+
     best_train_loss = float("inf")
+    best_recon_error = float("inf")
     model.train()
     global_step = 0
+    total_images_processed = 0
 
-    for epoch in tqdm(range(epochs), desc="Training epochs"):
-        total_train_loss = 0
-        total_recon_error = 0
-        n_train = 0
-        for (batch_idx, train_tensors) in enumerate(tqdm(train_loader, desc=f"Epoch {epoch}", leave=False)):
+    # Use tqdm for progress based on total images
+    with tqdm(total=total_training_images, desc="Training Progress") as pbar:
+        while total_images_processed < total_training_images:
+            try:
+                train_tensors = next(train_loader_iter)
+            except StopIteration:
+                # This should not happen with itertools.cycle, but as a safeguard
+                train_loader_iter = itertools.cycle(train_loader)
+                train_tensors = next(train_loader_iter)
+
             optimizer.zero_grad()
             imgs = train_tensors[0].to(device)
+            current_batch_size = imgs.size(0)
+
             out = model(imgs)
             recon_error = criterion(out["x_recon"], imgs) / train_data_variance
-            total_recon_error += recon_error.item()
             loss = recon_error + beta * out["commitment_loss"]
             if not model_kwargs.get('use_ema', True):
                 loss += out["dictionary_loss"]
 
-            total_train_loss += loss.item()
             loss.backward()
             optimizer.step()
-            n_train += 1
+
+            # Log metrics to TensorBoard
+            writer.add_scalar('train/loss', loss.item(), total_images_processed)
+            writer.add_scalar('train/recon_error', recon_error.item(), total_images_processed)
+            writer.add_scalar('train/commitment_loss', out['commitment_loss'].item(), total_images_processed)
+            if not model_kwargs.get('use_ema', True):
+                writer.add_scalar('train/dictionary_loss', out['dictionary_loss'].item(), total_images_processed)
+
+            # Track best loss
+            current_loss = loss.item()
+            if current_loss < best_train_loss:
+                best_train_loss = current_loss
+
+            # Track best reconstruction error
+            current_recon_error = recon_error.item()
+            if current_recon_error < best_recon_error:
+                best_recon_error = current_recon_error
+
+            total_images_processed += current_batch_size
             global_step += 1
 
-            if ((batch_idx + 1) % eval_every) == 0:
-                print(f"epoch: {epoch}\nbatch_idx: {batch_idx + 1}", flush=True)
-                avg_train_loss = total_train_loss / n_train
-                avg_recon_error = total_recon_error / n_train
-                if avg_train_loss < best_train_loss:
-                    best_train_loss = avg_train_loss
-
-                # Log metrics to TensorBoard
-                writer.add_scalar('Loss/train', avg_train_loss, global_step)
-                writer.add_scalar('ReconstructionError/train', avg_recon_error, global_step)
-                writer.add_scalar('Loss/best_train', best_train_loss, global_step)
-
-                print(f"total_train_loss: {avg_train_loss}")
-                print(f"best_train_loss: {best_train_loss}")
-                print(f"recon_error: {avg_recon_error}\n")
-
-                total_train_loss = 0
-                total_recon_error = 0
-                n_train = 0
+            # Update progress bar
+            pbar.update(current_batch_size)
+            pbar.set_postfix({"Step": global_step, "ReconErr": current_recon_error, "BestReconErr": best_recon_error, "BestLoss": best_train_loss})
 
     save_path = run_dir / "model.pth"
     torch.save({
@@ -156,8 +168,7 @@ def main(args):
     }
 
     training_kwargs = {
-        'epochs': 2,
-        'eval_every': 100,
+        'total_training_images': 100000,
     }
 
     # Train model.
