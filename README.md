@@ -12,12 +12,15 @@ I created this project to explore and better understand VQVAEs through hands-on 
   * [Implementations](#implementations)
     + [VQ-VAE](#vq-vae)
     + [VQ-VAE-2](#vq-vae-2)
-    + [VQ-VAE-GAN](#vq-vae-gan)
+    + [VQ-GAN](#vq-gan)
     + [RVQ-VAE](#rvq-vae)
+    + [DALL-E](#dall-e)
+    + [MaskGIT](#maskgit)
+    + [Stable Diffusion](#stable-diffusion)
 
 
 ## Implementations
 
 ## VQ-VAE
 
-My implementation of the [VQ-VAE paper](https://arxiv.org/abs/1711.00937).
+Implementation based on the [VQ-VAE paper](https://arxiv.org/abs/1711.00937).
