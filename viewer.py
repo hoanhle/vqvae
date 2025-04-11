@@ -1,16 +1,17 @@
 from pathlib import Path
 import numpy as np
+import argparse
 
 
 from imgui_bundle import imgui, implot
 from pyviewer import single_image_viewer as siv
 from pyviewer.toolbar_viewer import ToolbarViewer
-from utils.utils import get_transform
+from utils.torch_utils import get_transform
 from torch.utils.data import DataLoader
 from torchvision.datasets import CIFAR10
 from utils.constants import CIFAR10_DATA_ROOT
 from vqvae import VQVAE
-from utils.utils import preprocess_img_tensors, get_device
+from utils.torch_utils import preprocess_img_tensors, get_device
 import time
 import logging
 logging.basicConfig(level=logging.INFO)
@@ -30,29 +31,24 @@ except:
 
 def main():
      # Load the model checkpoint
-    checkpoint_path = Path("checkpoints/vqvae_cifar10/run_2025-04-02_13-44-28/model.pth")
-    checkpoint = torch.load(checkpoint_path, weights_only=True)
+    parser = argparse.ArgumentParser(description="View VQ-VAE reconstructions and encodings.")
+    parser.add_argument('--checkpoint', type=str, default="checkpoints/vqvae_cifar10/run_2025-04-04_13-08-35/model.pth",
+                        help='Path to the model checkpoint file.')
+    args = parser.parse_args()
+
+    checkpoint_path = Path(args.checkpoint)
+    print(f"Loading checkpoint from {checkpoint_path}")
+    checkpoint = torch.load(checkpoint_path, weights_only=False)
     
     device = get_device()
-    model = VQVAE(**checkpoint['model_args']).to(device)
+    model = VQVAE(**checkpoint['model_kwargs']).to(device)
     model.load_state_dict(checkpoint['model_state_dict'])
     model.eval()    
 
     transform = get_transform()
 
     logging.info("Loading data...")
-    test_dataset = CIFAR10(CIFAR10_DATA_ROOT, False, transform, download=False)
-    test_loader = DataLoader(
-        dataset=test_dataset,
-        batch_size=1,
-        shuffle=False,
-        num_workers=1,
-    )
-
-    
-   
-
-        
+    test_dataset = CIFAR10(CIFAR10_DATA_ROOT, True, transform, download=False)
     siv.init('Async viewer', hidden=True)
 
     class Test(ToolbarViewer):
@@ -112,7 +108,7 @@ def main():
             
             if hasattr(self.state, "heatmap_data") and self.state.heatmap_data is not None:
                 height, width = self.state.heatmap_data.shape
-                plot_size = (width * 40, height * 40)
+                plot_size = (width * 40 * self.ui_scale, height * 40 * self.ui_scale)
                 if implot.begin_plot("Encoding Indices", plot_size):
                     implot.setup_axes("Width", "Height")
                     implot.plot_heatmap(
