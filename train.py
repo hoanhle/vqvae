@@ -19,7 +19,7 @@ import itertools
 from torchvision.utils import make_grid
 
 
-def train(submit_config, model_kwargs, dataset_kwargs, training_kwargs, device):
+def train(submit_config, model_kwargs, dataset_kwargs, training_kwargs, device, batch_size=256):
     """Initializes and trains the VQ-VAE model."""
     # Setup logging
     run_dir = submit_config.get('run_dir', '.')
@@ -29,7 +29,6 @@ def train(submit_config, model_kwargs, dataset_kwargs, training_kwargs, device):
     model = VQVAE(**model_kwargs).to(device)
 
     # Initialize dataset.
-    batch_size = 256
     workers = 2
     transform = get_transform()
     download = False
