@@ -61,7 +61,7 @@ if __name__ == "__main__":
 
     num_hiddens_values = [128, 256]
     num_residual_hiddens_values = [64, 128, 256]
-    embedding_dim_values = [32, 64]
+    embedding_dim_values = [16, 32, 64]
     num_embeddings_values = [512, 1024, 2048]
 
     sweep_params = list(itertools.product(
