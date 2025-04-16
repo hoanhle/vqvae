@@ -30,6 +30,7 @@ class ResidualStack(nn.Module):
             )
 
         self.layers = nn.ModuleList(layers)
+        self.relu = nn.ReLU()
 
     def forward(self, x):
         h = x
@@ -37,7 +38,8 @@ class ResidualStack(nn.Module):
             h = h + layer(h)
 
         # ResNet V1-style.
-        return torch.relu(h)
+        output = self.relu(h)
+        return output
 
 
 
