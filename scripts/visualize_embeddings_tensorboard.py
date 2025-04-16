@@ -1,6 +1,6 @@
 import torch
 from torch.utils.tensorboard import SummaryWriter
-from vqvae import VQVAE
+from models.vqvae.vqvae import VQVAE
 from utils.utils import get_transform, get_device
 from torchvision.datasets import CIFAR10
 from utils.utils import CIFAR10_DATA_ROOT

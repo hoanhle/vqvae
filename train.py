@@ -6,9 +6,9 @@ import torch
 from tqdm import tqdm
 
 from torch import nn, optim
-from torch.utils.data import DataLoader
+from torch.utils.data import DataLoader, Subset
 from torchvision.datasets import CIFAR10
-from vqvae import VQVAE
+from models.vqvae.vqvae import VQVAE
 from utils.torch_utils import get_transform
 from datetime import datetime
 from pathlib import Path

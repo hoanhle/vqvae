@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 import torch
 import torchvision
-from vqvae import VQVAE
+from models.vqvae.vqvae import VQVAE
 import numpy as np
 import matplotlib.pyplot as plt
 from utils.torch_utils import fix_seed, get_device, get_transform
@@ -53,7 +53,6 @@ def load_model(device):
 
 
 def main():
-    # Fix random seed for reproducibility.
     fix_seed(42)
     
     # Setup device and dataloader.

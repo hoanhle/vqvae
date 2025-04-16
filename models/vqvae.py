@@ -364,7 +364,7 @@ if __name__ == "__main__":
   
         # Visualize the model graph
         dummy_input = torch.randn(1, 3, 32, 32).to("cuda")  # Assuming 3 channel 64x64 images
-        export_to_netron(model, dummy_input, "vqvae_model.onnx")
+        export_to_netron(model, dummy_input, "../../vqvae_model.onnx")
     
 
     use_torchscan = True
