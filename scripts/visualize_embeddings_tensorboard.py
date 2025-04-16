@@ -1,11 +1,11 @@
 import torch
 from torch.utils.tensorboard import SummaryWriter
-from models.vqvae.vqvae import VQVAE
-from utils.utils import get_transform, get_device
+from models.vqvae import VQVAE
+from utils.torch_utils import get_transform, get_device
 from torchvision.datasets import CIFAR10
-from utils.utils import CIFAR10_DATA_ROOT
+from utils.constants import CIFAR10_DATA_ROOT
 from pathlib import Path
-from eval_utils import get_receptive_field_coords
+from scripts.compute_receptive_field import get_receptive_field_coords
 import logging
 from tqdm import tqdm
 from collections import defaultdict
