@@ -1,20 +1,20 @@
 import torch
 from torch.utils.data import DataLoader
 from torchvision.datasets import CIFAR10
-from vqvae import VQVAE
-from utils.utils import save_img_tensors_as_grid
+from models.vqvae import VQVAE
+from utils.torch_utils import save_img_tensors_as_grid
 from pathlib import Path
-from utils.utils import CIFAR10_DATA_ROOT
-from utils.utils import get_transform
+from utils.constants import CIFAR10_DATA_ROOT
+from utils.torch_utils import get_transform, get_device
 
 def main():
     # Load the model checkpoint
-    checkpoint_path = Path("checkpoints/vqvae_cifar10/run_2025-03-30_00-49-32/model.pth")
+    checkpoint_path = Path("log/vqvae_cifar10/run_2025-04-15_13-38-30_hid256_res256_emb32_num32768/model.pth")
     checkpoint = torch.load(checkpoint_path)
     
     # Initialize model with saved args
-    device = torch.device("mps" if torch.backends.mps.is_available() else "cuda" if torch.cuda.is_available() else "cpu")
-    model = VQVAE(**checkpoint['model_args']).to(device)
+    device = get_device()
+    model = VQVAE(**checkpoint['model_kwargs']).to(device)
     model.load_state_dict(checkpoint['model_state_dict'])
     model.eval()    
 
