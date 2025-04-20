@@ -22,7 +22,7 @@ def get_cifar10_datasets(data_dir: str = "./data/cifar10") -> Tuple[CIFAR10, CIF
     print(f"CIFAR-10 downloaded to: {target_path}")
     return trainset, testset
 
-def get_imagenet_datasets(data_dir: str = "./data/imagenet") -> Tuple[ImageNet, ImageNet]:
+def get_imagenet_datasets(data_dir: str = "/home/leh19/scratch/graphics/datasets/ImageNet/ILSVRC2012") -> Tuple[ImageNet, ImageNet]:
     """Download and load ImageNet dataset.
     
     Args:
@@ -100,30 +100,30 @@ def visualize_samples(
     plt.show()
 
 def main():
-    # Load CIFAR-10 dataset
-    trainset, testset = get_cifar10_datasets()
+    # # Load CIFAR-10 dataset
+    # trainset, testset = get_cifar10_datasets()
     
-    # Visualize training samples
-    visualize_samples(
-        trainset,
-        num_samples=5,
-        title="CIFAR-10 Training Samples"
-    )
+    # # Visualize training samples
+    # visualize_samples(
+    #     trainset,
+    #     num_samples=5,
+    #     title="CIFAR-10 Training Samples"
+    # )
     
-    # Visualize test samples
-    visualize_samples(
-        testset,
-        num_samples=5,
-        title="CIFAR-10 Test Samples"
-    )
+    # # Visualize test samples
+    # visualize_samples(
+    #     testset,
+    #     num_samples=5,
+    #     title="CIFAR-10 Test Samples"
+    # )
     
     # Uncomment to load ImageNet dataset (requires significant disk space)
-    # imagenet_train, imagenet_val = get_imagenet_datasets()
-    # visualize_samples(
-    #     imagenet_train,
-    #     num_samples=5,
-    #     title="ImageNet Training Samples"
-    # )
+    imagenet_train, imagenet_val = get_imagenet_datasets()
+    visualize_samples(
+        imagenet_train,
+        num_samples=5,
+        title="ImageNet Training Samples"
+    )
 
 if __name__ == "__main__":
     main()

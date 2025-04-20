@@ -5,7 +5,6 @@ from PIL import Image
 from torchvision import transforms
 import random
 
-
 def fix_seed(seed):
     """Sets the seed for reproducibility."""
     random.seed(seed)

@@ -10,7 +10,7 @@ from utils.torch_utils import get_transform
 from torch.utils.data import DataLoader
 from torchvision.datasets import CIFAR10
 from utils.constants import CIFAR10_DATA_ROOT
-from models.vqvae.vqvae import VQVAE
+from models.vqvae import VQVAE
 from utils.torch_utils import preprocess_img_tensors, get_device
 import time
 import logging
