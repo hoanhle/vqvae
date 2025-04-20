@@ -6,3 +6,4 @@ logs/
 checkpoints/
 data/
 log/
+tmp.py
