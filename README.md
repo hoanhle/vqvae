@@ -25,3 +25,17 @@ I created this project to explore and better understand VQVAEs through hands-on 
 ## VQ-VAE
 
 Implementation based on the [VQ-VAE paper](https://arxiv.org/abs/1711.00937).
+
+
+## Citations
+
+```bibtex
+@misc{oord2018neural,
+    title   = {Neural Discrete Representation Learning},
+    author  = {Aaron van den Oord and Oriol Vinyals and Koray Kavukcuoglu},
+    year    = {2018},
+    eprint  = {1711.00937},
+    archivePrefix = {arXiv},
+    primaryClass = {cs.LG}
+}
+```
