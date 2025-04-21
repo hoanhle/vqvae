@@ -3,6 +3,7 @@ import torch
 from torch import nn
 from torch.nn import functional as F
 from utils.torch_utils import export_to_netron
+import math
 
 class ResidualStack(nn.Module):
     def __init__(self, num_hiddens, num_residual_layers, num_residual_hiddens):
@@ -197,7 +198,8 @@ class VectorQuantizer(nn.Module):
         self.epsilon = epsilon
 
         # Dictionary embeddings.
-        limit = 3 ** 0.5
+        scale = 1.0
+        limit = math.sqrt(3.0 * scale / self.embedding_dim) # equivalent to having variance 1/embedding_dim (see: https://github.com/google-deepmind/sonnet/blob/v2/sonnet/src/nets/vqvae.py)
         e_i_ts = torch.FloatTensor(embedding_dim, num_embeddings).uniform_(
             -limit, limit
         )
