@@ -66,6 +66,9 @@ def train(submit_config, model_kwargs, dataset_kwargs, training_kwargs, device, 
     best_recon_err = float("inf")
     model.train()
 
+    num_embeddings = model_kwargs['num_embeddings']
+    epsilon = 1e-10
+
     # -----------------------------------------------------------------------
     # 2) TRAINING LOOP
     # -----------------------------------------------------------------------
@@ -159,6 +162,22 @@ def train(submit_config, model_kwargs, dataset_kwargs, training_kwargs, device, 
             writer.add_scalar('train/commitment_loss', model.commitment_loss.item(), total_images_processed)
             if not model_kwargs.get('use_ema', True):
                 writer.add_scalar('train/dictionary_loss', model.dictionary_loss.item(), total_images_processed)
+
+            # track codebook usage and perplexity
+            if hasattr(model, 'encoding_indices') and model.encoding_indices is not None:
+                indices_cpu = model.encoding_indices.detach().cpu().flatten()
+
+                unique_indices = torch.unique(indices_cpu).numel()
+                percent_codes_used = (unique_indices / num_embeddings) * 100
+                writer.add_scalar('stats/percent_codes_used', percent_codes_used, total_images_processed)
+
+                counts = torch.bincount(indices_cpu, minlength=num_embeddings)
+                probs = counts.float() / counts.sum()
+                entropy = -torch.sum(probs * torch.log(probs + epsilon))
+                perplexity = torch.exp(entropy)
+                writer.add_scalar('stats/codebook_perplexity', perplexity.item(), total_images_processed)
+
+            # -----------------------------------------
 
             # track best loss
             if loss.item()      < best_train_loss:   best_train_loss = loss.item()
