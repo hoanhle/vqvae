@@ -77,33 +77,39 @@ def train(submit_config, model_kwargs, dataset_kwargs, training_kwargs, device, 
 
                 with torch.no_grad():
                     # TODO: There is a bug in the way tensorboard handles histograms, which make the distribution look "incorrect"
-                    # at the moment. I suspect the error is in HistogramProto, but I have not had time to debug this yet.
-                    if total_images_processed == 0:
-                        logging.info("Logging codebook embeddings")
-                        logging.info(f"Codebook embeddings shape: {model.vq.e_i_ts.detach().cpu().shape}")
-                        writer.add_histogram('distribution/codebook_embeddings_initial', model.vq.e_i_ts.detach().cpu(), global_step=total_images_processed, bins="fd")
+                    # See: https://github.com/tensorflow/tensorboard/blob/master/tensorboard/plugins/histogram/README.md
+                    # Tl,dr: Note that for visualization purposes, histogram data is rebinned into 30 linearly spaced bins, 
+                    # where y counts from the original input bins at each step are linearly distributed into the new bins, which are shared across all steps. 
+                    # For some distributions, this can result in significant distortions (see existing issue).
+                    # So I commented out the histogram logging for now.
+                    # if total_images_processed == 0:
+                    #     logging.info("Logging codebook embeddings")
+                    #     logging.info(f"Codebook embeddings shape: {model.vq.e_i_ts.detach().cpu().shape}")
+                    #     writer.add_histogram('distribution/codebook_embeddings_initial', model.vq.e_i_ts.detach().cpu(), global_step=total_images_processed, bins="fd")
 
 
-                    writer.add_histogram('distribution/codebook_embeddings', model.vq.e_i_ts.detach().cpu(), global_step=total_images_processed, bins="fd")
+                    # writer.add_histogram('distribution/codebook_embeddings', model.vq.e_i_ts.detach().cpu(), global_step=total_images_processed, bins="fd")
 
-                    if total_images_processed > 0:
-                        # log flat_x stats
-                        flat_x = model.vq.last_flat_x       # still on GPU
-                        flat_cpu = flat_x.detach().cpu()    # move off-GPU
-                        model.vq.last_flat_x = None         # free GPU memory
+                    # if total_images_processed > 0:
+                    #     # log flat_x stats
+                    #     flat_x = model.vq.last_flat_x       # still on GPU
+                    #     flat_cpu = flat_x.detach().cpu()    # move off-GPU
+                    #     model.vq.last_flat_x = None         # free GPU memory
 
-                        writer.add_histogram(
-                            "distribution/vq_pre_quantization_input",
-                            flat_cpu,
-                            global_step=total_images_processed,
-                            bins="fd"
-                        )
-                        writer.add_scalar("stats/flat_x_mean", flat_cpu.mean(), total_images_processed)
-                        writer.add_scalar("stats/flat_x_std",  flat_cpu.std(),  total_images_processed)
-                        writer.add_scalar("stats/flat_x_min",  flat_cpu.min(),  total_images_processed)
-                        writer.add_scalar("stats/flat_x_max",  flat_cpu.max(),  total_images_processed)
+                    #     writer.add_histogram(
+                    #         "distribution/vq_pre_quantization_input",
+                    #         flat_cpu,
+                    #         global_step=total_images_processed,
+                    #         bins="fd"
+                    #     )
+                    #     writer.add_scalar("stats/flat_x_mean", flat_cpu.mean(), total_images_processed)
+                    #     writer.add_scalar("stats/flat_x_std",  flat_cpu.std(),  total_images_processed)
+                    #     writer.add_scalar("stats/flat_x_min",  flat_cpu.min(),  total_images_processed)
+                    #     writer.add_scalar("stats/flat_x_max",  flat_cpu.max(),  total_images_processed)
 
-                    # Use the fixed evaluation images for consistent comparison.
+
+            
+                    # --------------------------
                     out_eval = model(fixed_eval_images)
                     imgs_viz = (fixed_eval_images.clamp(-0.5, 0.5) + 0.5)
                     recon_viz = (out_eval.clamp(-0.5, 0.5) + 0.5)
