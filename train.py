@@ -76,7 +76,15 @@ def train(submit_config, model_kwargs, dataset_kwargs, training_kwargs, device, 
                 model.eval()
 
                 with torch.no_grad():
-                    writer.add_histogram('distribution/codebook_embeddings', model.vq.e_i_ts.detach().cpu(), global_step=total_images_processed)
+                    # TODO: There is a bug in the way tensorboard handles histograms, which make the distribution look "incorrect"
+                    # at the moment. I suspect the error is in HistogramProto, but I have not had time to debug this yet.
+                    if total_images_processed == 0:
+                        logging.info("Logging codebook embeddings")
+                        logging.info(f"Codebook embeddings shape: {model.vq.e_i_ts.detach().cpu().shape}")
+                        writer.add_histogram('distribution/codebook_embeddings_initial', model.vq.e_i_ts.detach().cpu(), global_step=total_images_processed, bins="fd")
+
+
+                    writer.add_histogram('distribution/codebook_embeddings', model.vq.e_i_ts.detach().cpu(), global_step=total_images_processed, bins="fd")
 
                     if total_images_processed > 0:
                         # log flat_x stats
@@ -88,6 +96,7 @@ def train(submit_config, model_kwargs, dataset_kwargs, training_kwargs, device, 
                             "distribution/vq_pre_quantization_input",
                             flat_cpu,
                             global_step=total_images_processed,
+                            bins="fd"
                         )
                         writer.add_scalar("stats/flat_x_mean", flat_cpu.mean(), total_images_processed)
                         writer.add_scalar("stats/flat_x_std",  flat_cpu.std(),  total_images_processed)
