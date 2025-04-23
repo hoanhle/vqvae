@@ -42,6 +42,20 @@ This repository will contain a few techniques from various papers to combat "dea
 
 [CVQ-VAE](https://arxiv.org/abs/2307.15139) prevents collapse by identifying underutilized ("dead") codevectors and reinitializing them using "anchors" sampled from the encoded features. This strategy encourages these codebook vectors to align more closely with the distribution of the encoded features, enhancing their likelihood of being chosen and optimized in subsequent training iterations.
 
+![cvq-vae](images/cvq-vae.png)
+
+```python
+import torch
+from models.vqvae import VectorQuantizer
+
+vq = VectorQuantizer(
+    dim = 256,
+    codebook_size = 512,
+    online_update = True,
+    anchor = "random",
+)
+```
+
 
 ## Citations
 
