@@ -179,20 +179,19 @@ def train(submit_config, model_kwargs, dataset_kwargs, training_kwargs, device, 
 
             # -----------------------------------------
 
-            # track best loss
-            if loss.item()      < best_train_loss:   best_train_loss = loss.item()
-            if recon_error.item() < best_recon_err:  best_recon_err  = recon_error.item()
-
-            # — Checkpoint best model —
+            # Checkpoint best model —
             if loss.item() < best_train_loss:
-                best_loss = loss.item()
+                best_train_loss = loss.item()
                 ckpt = {
                     'model_state_dict': model.state_dict(),
                     'optimizer_state_dict': optimizer.state_dict(),
                     'model_kwargs': model_kwargs,
                 }
                 torch.save(ckpt, run_dir / "best_model.pth")
-                logging.info(f"Best model checkpoint saved to {run_dir / 'best_model.pth'}")
+
+            if recon_error.item() < best_recon_err:
+                best_recon_err = recon_error.item()
+
 
             # increment & progress bar
             total_images_processed += current_batch_size
@@ -200,7 +199,7 @@ def train(submit_config, model_kwargs, dataset_kwargs, training_kwargs, device, 
             pbar.set_postfix({
                 "ReconErr": recon_error.item(),
                 "BestRecon": best_recon_err,
-                "BestLoss":  best_train_loss
+                "BestLoss":  best_train_loss 
             })
 
 
