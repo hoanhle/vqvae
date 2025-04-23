@@ -49,8 +49,11 @@ import torch
 from models.vqvae import VectorQuantizer
 
 vq = VectorQuantizer(
-    dim = 256,
-    codebook_size = 512,
+    embedding_dim = 32,
+    num_embeddings = 512,
+    use_ema = True,
+    decay = 0.99,
+    epsilon = 1e-5,
     online_update = True,
     anchor = "random",
 )
