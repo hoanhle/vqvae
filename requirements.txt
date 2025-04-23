@@ -11,5 +11,5 @@ matplotlib
 tqdm
 tensorboard
 logging
-torchsummary
+torchscan
 -e ../pyviewer
