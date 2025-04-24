@@ -1,4 +1,4 @@
-# PyTorch VQVAEs
+# PyTorch Vector Quantized Variational Autoencoders
 
 This repository contains PyTorch implementations of various Vector Quantized Variational Autoencoders (VQVAEs).
 
@@ -33,6 +33,36 @@ conda env create -f environment.yml
 
 Implementation based on the [VQ-VAE paper](https://arxiv.org/abs/1711.00937).
 
+VQ-VAE learns a discrete latent representation of the data by combining a encoder, a shared codebook, and a decoder. The encoder $E(x)$ maps an input $x$ (e.g. an image) to a feature map of size $H \times W \times D$, which we view as $N=H \times W$ separate $D$-dimensional vectors $z_i$. Each $z_i$ is then independently quantized by finding its nearest neighbor in the codebook:
+
+$$
+k_i = \arg\min_j \|z_i - e_j\|,\quad e_i = e_{k_i}.
+$$
+
+producing a discrete latent tensor of the same spatial dimensions. The decoder $D(e)$ takes this quantized representation and reconstructs the input.
+
+Training minimizes a three-term loss. The reconstruction term $\|x-D(e)\|^2$ encourages the output to resemble the input. The codebook term $\sum_i\left\|{sg}\left[z_i\right]-e_i\right\|^2$ moves each selected codebook vector closer to the encoder outputs that get assigned to it (where "sg" is the stop-gradient operator). The commitment term $\beta \sum_i\left\|{sg}\left[e_i\right]-z_i\right\|^2$, encourages the outputs of the encoder to stay close
+to the chosen codebook vector, prevents the encoder outputs from fluctuating too frequently between code vectors; $\beta$ is a user-chosen hyperparameter. Altogether:
+  
+$$
+\mathcal{L}(x)=\|x-D(e)\|^2+\sum_i\left\|{sg}\left[z_i\right]-e_i\right\|^2+\beta \sum_i\left\|{sg}\left[e_i\right]-z_i\right\|^2
+$$
+
+
+Rather than back-propagating into the codebook, VQ-VAE updates each codebook entry $e_j$ via exponential moving averages over all $z_i$ assigned to it during training, which is a more efficient approach.
+
+```python
+import torch
+from models.vqvae import VectorQuantizer
+
+vq = VectorQuantizer(
+    embedding_dim = 32,
+    num_embeddings = 512,
+    use_ema = True, # use the exponential moving average updates for the codebook, as a replacement for the codebook loss
+    decay = 0.99,
+    epsilon = 1e-5,
+)
+```
 
 ## Increasing codebook usage
 
@@ -57,6 +87,17 @@ vq = VectorQuantizer(
     online_update = True,
     anchor = "random",
 )
+```
+
+## Viewer
+
+There is a currently a prototype viewer under development. It allows you to view the input image, the reconstructed image, and the encoding indices
+of a trained VQ-VAE model.
+
+You can run the viewer with:
+
+```bash
+python viewer.py --checkpoint <path_to_checkpoint>
 ```
 
 
@@ -94,5 +135,17 @@ vq = VectorQuantizer(
       archivePrefix={arXiv},
       primaryClass={cs.CV},
       url={https://arxiv.org/abs/2404.02905}, 
+}
+```
+
+```bibtex
+@misc{oord2016conditionalimagegenerationpixelcnn,
+      title={Conditional Image Generation with PixelCNN Decoders}, 
+      author={Aaron van den Oord and Nal Kalchbrenner and Oriol Vinyals and Lasse Espeholt and Alex Graves and Koray Kavukcuoglu},
+      year={2016},
+      eprint={1606.05328},
+      archivePrefix={arXiv},
+      primaryClass={cs.CV},
+      url={https://arxiv.org/abs/1606.05328}, 
 }
 ```

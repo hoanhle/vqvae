@@ -1,13 +1,12 @@
 from pathlib import Path
 import numpy as np
 import argparse
-
-
+from PIL import Image
 from imgui_bundle import imgui, implot
 from pyviewer import single_image_viewer as siv
 from pyviewer.toolbar_viewer import ToolbarViewer
 from utils.torch_utils import get_transform
-from torch.utils.data import DataLoader
+from torch.utils.data import Subset
 from torchvision.datasets import CIFAR10
 from utils.constants import CIFAR10_DATA_ROOT
 from models.vqvae import VQVAE
@@ -27,17 +26,19 @@ try:
 except:
     pass
 
+SAVE_DIR = Path("./saved_viewer_images")
+SAVE_DIR.mkdir(exist_ok=True)
 
 
 def main():
      # Load the model checkpoint
     parser = argparse.ArgumentParser(description="View VQ-VAE reconstructions and encodings.")
-    parser.add_argument('--checkpoint', type=str, default="checkpoints/vqvae_cifar10/run_2025-04-04_13-08-35/model.pth",
+    parser.add_argument('--checkpoint', type=str, default="", required=True,
                         help='Path to the model checkpoint file.')
     args = parser.parse_args()
-
+    
     checkpoint_path = Path(args.checkpoint)
-    print(f"Loading checkpoint from {checkpoint_path}")
+    logging.info(f"Loading checkpoint from {checkpoint_path}")
     checkpoint = torch.load(checkpoint_path, weights_only=False)
     
     device = get_device()
@@ -48,18 +49,25 @@ def main():
     transform = get_transform()
 
     logging.info("Loading data...")
-    test_dataset = CIFAR10(CIFAR10_DATA_ROOT, True, transform, download=False)
+
+    load_train = True # False for test set
+    dataset = CIFAR10(CIFAR10_DATA_ROOT, load_train, transform, download=False)
+
+    load_subset = True
+    subset_size = 4096
+    if load_subset: dataset = Subset(dataset, range(subset_size))
     siv.init('Async viewer', hidden=True)
 
     class Test(ToolbarViewer):
         def setup_state(self):
             self.state.seed = 0
             self.state.img = None
-            self.state.index = np.random.randint(len(test_dataset))
+            self.state.index = np.random.randint(len(dataset))
             self.state.update_requested = True
             self.state.encoding_indices = None
-            self.state.heatmap_data = None  # << store float version here
-            self.test_dataset = test_dataset
+            self.state.z_q = None
+            self.state.heatmap_data = None
+            self.test_dataset = dataset
 
 
         def compute(self):
@@ -78,8 +86,9 @@ def main():
                 orig_array, _, _ = preprocess_img_tensors(test_batch)
 
                 # Encode + Decode
-                z_q, _, _, encoding_indices = model.quantize(test_batch)
-                x_recon = model.decoder(z_q).cpu()
+                self.state.z_q = model.quantize(test_batch)
+                encoding_indices = model.encoding_indices
+                x_recon = model.decoder(self.state.z_q).cpu()
                 recon_array, _, _ = preprocess_img_tensors(x_recon)
 
                 # Combine original + reconstruction
@@ -88,7 +97,7 @@ def main():
 
                 # Store raw encoding indices (no normalization)
                 self.state.encoding_indices = (
-                    encoding_indices.view(z_q.shape[2], z_q.shape[3])
+                    encoding_indices.view(self.state.z_q.shape[2], self.state.z_q.shape[3])
                     .cpu()
                     .numpy()
                     .astype(np.int32)
@@ -102,10 +111,24 @@ def main():
 
 
         def draw_toolbar(self):
-            if imgui.button("Next image"):
+            clicked_next = imgui.button("Next image")
+            if clicked_next:
                 self.state.index = np.random.randint(len(self.test_dataset))
                 self.state.update_requested = True
-            
+
+            imgui.same_line()
+            clicked_save = imgui.button("Save Image")
+            if clicked_save and self.state.img is not None:
+                try:
+                    img_to_save = (self.state.img).astype(np.uint8)
+                    pil_img = Image.fromarray(img_to_save)
+                    save_path = SAVE_DIR / f"image_{self.state.index}.png"
+                    pil_img.save(save_path)
+                    logging.info(f"Image saved to {save_path}")
+                except Exception as e:
+                    logging.error(f"Failed to save image: {e}")
+
+
             if hasattr(self.state, "heatmap_data") and self.state.heatmap_data is not None:
                 height, width = self.state.heatmap_data.shape
                 plot_size = (width * 40 * self.ui_scale, height * 40 * self.ui_scale)
@@ -119,9 +142,6 @@ def main():
                         "%.0f"
                     )
                     implot.end_plot()
-
-
-
 
 
     _ = Test('test_viewer')
